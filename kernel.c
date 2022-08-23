@@ -1,5 +1,14 @@
 #include <stddef.h>
 #include <stdint.h>
+
+enum
+{
+  RASPI_0 = 0,
+  RASPI_1 = 1,
+  RASPI_2 = 2,
+  RASPI_3 = 3,
+  RASPI_4 = 4
+};
  
 static uint32_t MMIO_BASE;
  
@@ -7,10 +16,10 @@ static uint32_t MMIO_BASE;
 static inline void mmio_init(int raspi)
 {
     switch (raspi) {
-        case 2:
-        case 3:  MMIO_BASE = 0x3F000000; break; // for raspi2 & 3
-        case 4:  MMIO_BASE = 0xFE000000; break; // for raspi4
-        default: MMIO_BASE = 0x20000000; break; // for raspi1, raspi zero etc.
+        case RASPI_2:
+        case RASPI_3:  MMIO_BASE = 0x3F000000; break; // for raspi2 & 3
+        case RASPI_4:  MMIO_BASE = 0xFE000000; break; // for raspi4
+        default:       MMIO_BASE = 0x20000000; break; // for raspi1, raspi zero etc.
     }
 }
  
@@ -147,13 +156,29 @@ unsigned char uart_getc()
     while ( mmio_read(UART0_FR) & (1 << 4) ) { }
     return mmio_read(UART0_DR);
 }
- 
+  
 void uart_puts(const char* str)
 {
 	for (size_t i = 0; str[i] != '\0'; i ++)
 		uart_putc((unsigned char)str[i]);
 }
- 
+
+void uart_puthex(uint32_t value)
+{
+	uart_puts("0x");
+  for(unsigned int i = 0; i < 8; i++)
+  {
+    char v = (value >> ((7-i)*4)) & 0xF;
+    if(v < 0xa)
+    {
+      uart_putc(v + '0');
+    }
+    else
+    {
+      uart_putc(v + 'a');
+    }
+  }
+} 
 #if defined(__cplusplus)
 extern "C" /* Use C linkage for kernel_main. */
 #endif
@@ -166,9 +191,15 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
 #endif
 {
-	// initialize UART for Raspi2
-	uart_init(2);
-	uart_puts("Hello, kernel World!\r\n");
+	uart_init(RASPI_0);
+	uart_puts("eOS\n");
+	uart_puts("r0: ");
+  uart_puthex(r0);
+	uart_puts("\nr1: ");
+  uart_puthex(r1);
+	uart_puts("\nr2: ");
+  uart_puthex(atags);
+	uart_putc('\n');
  
 	while (1)
 		uart_putc(uart_getc());
