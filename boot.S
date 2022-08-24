@@ -6,7 +6,7 @@
 // Make _start global.
 .globl _start
  
-        .org 0x8000
+//.org 0x8000
 // Entry point for the kernel.
 // r15 -> should begin execution at 0x8000.
 // r0 -> 0x00000000
