@@ -9,6 +9,11 @@ enum
   RASPI_3 = 3,
   RASPI_4 = 4
 };
+
+#define ENDIAN_B2L_32(value) (((value >> 24) & 0x000000FF) | \
+                              ((value >>  8) & 0x0000FF00) | \
+                              ((value <<  8) & 0x00FF0000) | \
+                              ((value << 24) & 0xFF000000))
  
 static uint32_t MMIO_BASE;
  
@@ -128,9 +133,9 @@ void uart_init(int raspi)
 	}
  
 	// Divider = 3000000 / (16 * 115200) = 1.627 = ~1.
-	mmio_write(UART0_IBRD, 1);
+	mmio_write(UART0_IBRD, 26);
 	// Fractional part register = (.627 * 64) + 0.5 = 40.6 = ~40.
-	mmio_write(UART0_FBRD, 40);
+	mmio_write(UART0_FBRD, 0);
  
 	// Enable FIFO & 8 bit data transmission (1 stop bit, no parity).
 	mmio_write(UART0_LCRH, (1 << 4) | (1 << 5) | (1 << 6));
@@ -175,7 +180,7 @@ void uart_puthex(uint32_t value)
     }
     else
     {
-      uart_putc(v + 'a');
+      uart_putc((v-0xa) + 'a');
     }
   }
 } 
@@ -191,16 +196,25 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
 #endif
 {
-	uart_init(RASPI_0);
-	uart_puts("eOS\n");
+	uart_init(RASPI_1);
+	uart_puts("eOS\r\n");
 	uart_puts("r0: ");
   uart_puthex(r0);
-	uart_puts("\nr1: ");
+	uart_puts("\r\nr1: ");
   uart_puthex(r1);
-	uart_puts("\nr2: ");
+	uart_puts("\r\natags: ");
   uart_puthex(atags);
-	uart_putc('\n');
- 
+	uart_puts("\r\n");
+
+  uint32_t * ptr;
+  for(ptr = 0; ; ptr++)
+  {
+    uart_puts("\r\n");
+    uart_puthex((uint32_t) ptr);
+    uart_puts(" - ");
+    uart_puthex(*ptr);
+  }
+
 	while (1)
 		uart_putc(uart_getc());
 }
