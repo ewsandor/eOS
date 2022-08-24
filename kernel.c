@@ -168,22 +168,78 @@ void uart_puts(const char* str)
 		uart_putc((unsigned char)str[i]);
 }
 
-void uart_puthex(uint32_t value)
+void uart_put_printable_c(unsigned char c)
 {
-	uart_puts("0x");
-  for(unsigned int i = 0; i < 8; i++)
+  char c_sanitized = (c & 0xFF);
+  if(c_sanitized < ' ' || c_sanitized > '~')
   {
-    char v = (value >> ((7-i)*4)) & 0xF;
-    if(v < 0xa)
-    {
-      uart_putc(v + '0');
-    }
-    else
-    {
-      uart_putc((v-0xa) + 'a');
-    }
+    uart_putc('.');
+  }
+  else
+  {
+    uart_putc(c_sanitized);
+  }
+}
+
+void uart_put_raw_nibble(char value)
+{
+  char v = (value & 0xF);
+
+  if(v < 0xa)
+  {
+    uart_putc(v + '0');
+  }
+  else
+  {
+    uart_putc((v-0xa) + 'a');
   }
 } 
+
+void uart_put_raw_hex8(char value)
+{
+  uart_put_raw_nibble((value >> 4));
+  uart_put_raw_nibble(value);
+} 
+
+void uart_put_raw_hex32(uint32_t value)
+{
+  for(unsigned int i = 0; i < 4; i++)
+  {
+    char v = (value >> ((3-i)*8));
+    uart_put_raw_hex8(v);
+  }
+} 
+
+void uart_put_hex32(uint32_t value)
+{
+	uart_puts("0x");
+  uart_put_raw_hex32(value);
+}
+
+void uart_put_canonical_hex(char* address)
+{
+  uint32_t i;
+  uart_put_raw_hex32((uint32_t) address);
+  uart_putc(' ');
+  for(i = 0; i < 16; i++)
+  {
+    uart_putc(' ');
+    if(8 == i)
+    {
+      uart_putc(' ');
+    }
+    char * value = (address + i);
+    uart_put_raw_hex8(*value);
+  }
+  uart_puts("  |");
+  for(i = 0; i < 16; i++)
+  {
+    char * value = (address + i);
+    uart_put_printable_c(*value);
+  }
+  uart_puts("|");
+}
+  
 #if defined(__cplusplus)
 extern "C" /* Use C linkage for kernel_main. */
 #endif
@@ -197,24 +253,32 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
 #endif
 {
 	uart_init(RASPI_1);
-	uart_puts("eOS\r\n");
-	uart_puts("r0: ");
-  uart_puthex(r0);
-	uart_puts("\r\nr1: ");
-  uart_puthex(r1);
+	uart_puts("\r\n\r\n###############################\r\neOS");
+	uart_puts("\r\nr0:    ");
+  uart_put_hex32(r0);
+	uart_puts("\r\nr1:    ");
+  uart_put_hex32(r1);
 	uart_puts("\r\natags: ");
-  uart_puthex(atags);
+  uart_put_hex32(atags);
 	uart_puts("\r\n");
 
+  /*
   uint32_t * ptr;
   for(ptr = 0; ; ptr++)
   {
     uart_puts("\r\n");
-    uart_puthex((uint32_t) ptr);
+    uart_put_hex32((uint32_t) ptr);
     uart_puts(" - ");
-    uart_puthex(*ptr);
+    uart_put_raw_hex32(*ptr);
   }
-
+  */
+  char * ptr;
+  for(ptr = 0; ; ptr+=16)
+  {
+    uart_put_canonical_hex(ptr);
+    uart_puts("\r\n");
+  }
+ 
 	while (1)
 		uart_putc(uart_getc());
 }
