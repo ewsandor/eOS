@@ -253,20 +253,20 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
 #endif
 {
 	uart_init(RASPI_1);
-	uart_puts("\r\n\r\n###############################\r\neOS");
-	uart_puts("\r\nr0:    ");
+	uart_puts("\n\n###############################\neOS");
+	uart_puts("\nr0:    ");
   uart_put_hex32(r0);
-	uart_puts("\r\nr1:    ");
+	uart_puts("\nr1:    ");
   uart_put_hex32(r1);
-	uart_puts("\r\natags: ");
+	uart_puts("\natags: ");
   uart_put_hex32(atags);
-	uart_puts("\r\n");
+	uart_puts("\n");
 
   /*
   uint32_t * ptr;
   for(ptr = 0; ; ptr++)
   {
-    uart_puts("\r\n");
+    uart_puts("\n");
     uart_put_hex32((uint32_t) ptr);
     uart_puts(" - ");
     uart_put_raw_hex32(*ptr);
@@ -276,8 +276,16 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
   for(ptr = 0; ; ptr+=16)
   {
     uart_put_canonical_hex(ptr);
-    uart_puts("\r\n");
+    uart_puts("\n");
   }
+  /*
+  uart_puts("#STARTDUMP#");
+  char * ptr;
+  for(ptr = 0; ; ptr++)
+  {
+    uart_putc(*ptr);
+  }
+  */
  
 	while (1)
 		uart_putc(uart_getc());
