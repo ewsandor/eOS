@@ -1,6 +1,50 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define ENDIAN_B2L_32(value) (((value >> 24) & 0x000000FF) | \
+                              ((value >>  8) & 0x0000FF00) | \
+                              ((value <<  8) & 0x00FF0000) | \
+                              ((value << 24) & 0xFF000000))
+
+#define ENDIAN_B2L_64(value) (((value >> 56) & 0x00000000000000FF) | \
+                              ((value >> 40) & 0x000000000000FF00) | \
+                              ((value >> 24) & 0x0000000000FF0000) | \
+                              ((value >>  8) & 0x00000000FF000000) | \
+                              ((value <<  8) & 0x000000FF00000000) | \
+                              ((value << 24) & 0x0000FF0000000000) | \
+                              ((value << 40) & 0x00FF000000000000) | \
+                              ((value << 56) & 0xFF00000000000000))
+  
+// Device Tree Definitions
+// Device Tree Header
+typedef struct {
+  uint32_t magic;
+  uint32_t totalsize;
+  uint32_t off_dt_struct;
+  uint32_t off_dt_strings;
+  uint32_t off_mem_rsvmap;
+  uint32_t version;
+  uint32_t last_comp_version;
+  uint32_t boot_cpuid_phys;
+  uint32_t size_dt_strings;
+  uint32_t size_dt_struct;
+} dt_header_s;
+
+// Fixed max dt reserved memory array size (until malloc is implemented)
+#define DT_MEM_RESERVATION_BLOCK_MAX_ENTRIES 64
+// Device Tree Memory Reservation Entires
+typedef struct {
+  uint64_t address;
+  uint64_t size;
+} dt_mem_reservation_entry_s;
+
+typedef struct {
+  dt_header_s header;
+
+  unsigned int               mem_reservation_block_entries;
+  dt_mem_reservation_entry_s mem_reservation_block[DT_MEM_RESERVATION_BLOCK_MAX_ENTRIES];
+} dt_s;
+
 enum
 {
   RASPI_0 = 0,
@@ -10,11 +54,6 @@ enum
   RASPI_4 = 4
 };
 
-#define ENDIAN_B2L_32(value) (((value >> 24) & 0x000000FF) | \
-                              ((value >>  8) & 0x0000FF00) | \
-                              ((value <<  8) & 0x00FF0000) | \
-                              ((value << 24) & 0xFF000000))
- 
 static uint32_t MMIO_BASE;
  
 // The MMIO area base address, depends on board type
@@ -249,7 +288,7 @@ extern "C" /* Use C linkage for kernel_main. */
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 #else
 // arguments for AArch32
-void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
+void kernel_main(uint32_t r0, uint32_t r1, uint32_t dtb_ptr)
 #endif
 {
 	uart_init(RASPI_1);
@@ -258,8 +297,8 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
   uart_put_hex32(r0);
 	uart_puts("\nr1:    ");
   uart_put_hex32(r1);
-	uart_puts("\natags: ");
-  uart_put_hex32(atags);
+	uart_puts("\ndtb_ptr: ");
+  uart_put_hex32(dtb_ptr);
 	uart_puts("\n");
 
   /*
